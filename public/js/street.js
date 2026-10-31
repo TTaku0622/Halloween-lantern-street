@@ -2,7 +2,8 @@ import { buildLantern, lanternAt, drawLanternAt, flicker, flameColors, rgba } fr
 import { Ears, nextLight, clamp } from './sound.js';
 
 const scene = document.getElementById('scene');
-const sc = scene.getContext('2d');
+const screenCtx = scene.getContext('2d');
+let sc = screenCtx; // 描き先（道を取っておくときだけ一時的に切り替える）
 const msg = document.getElementById('msg');
 const earsBtn = document.getElementById('ears');
 const panel = document.getElementById('focus');
@@ -14,12 +15,13 @@ const CAM_H = 1.05;    // 目の高さ
 const SPACING = 1.4;   // ランタンの間隔（左右交互に置く）
 const FIRST_Z = 3.2;   // 一番手前のランタン
 const SIZE = 1.15;     // ランタンの大きさ
-const FAR = 45;        // これより奥は描かない
 // スマホなど指で触る端末は軽い設定にする。どちらも重ければ下の adapt() でさらに下げる
 const LITE = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('lite'); // ?lite で試せる
-const SPRITE = LITE ? 220 : 300;    // ランタン1つを作る解像度
-const SPRITE_HI = LITE ? 520 : 720; // 近くで見るとき
-const RENDERS_PER_FRAME = LITE ? 1 : 3; // 1フレームで向きを描き直すランタンの数
+const SPRITE = 300;    // ランタン1つを作る解像度
+const SPRITE_HI = 720; // 近くで見るとき
+const RENDERS_PER_FRAME = LITE ? 2 : 3; // 1フレームで向きを描き直すランタンの数
+const FAR = 45;                         // これより奥は描かない
+let frameMs = 0;                        // 重いときだけ 32（30fps）にする
 const NEAR = 0.3;      // これより手前は描かない（カメラからの奥行き）
 
 const ears = new Ears();
@@ -27,7 +29,7 @@ const shown = []; // { data, x, z, lantern, hi, rgb, light, seed, band, box }
 let next = null;
 let loading = false;
 let W = 0, H = 0, dpr = 1;
-let resScale = LITE ? 0.65 : 1; // 画面の解像度の倍率（重いと下がる）
+let resScale = 1; // 画面の解像度の倍率（重いと下がる）
 let vignetteCache = null;
 
 // カメラ（今の位置と、向かう先）。yaw は右を向くほど大きい
@@ -92,6 +94,7 @@ function addLanterns(list) {
       lantern: null, // 近づいたときに作る
       hi: null,
       rgb: flameColors(data.color).base,
+      glow: null, // 足元の光（光だまりと光の筋に使う）
       light: 0.5,
       seed: i * 1.7,
       band: i,
@@ -248,7 +251,7 @@ const ROW = 0.32, STONE = 0.27, GAP = 0.03; // 車道の石畳
 const SLAB = 0.85;                           // 歩道の敷石
 const CURB_H = 0.09, CURB_W = 0.14;          // 縁石
 const WALK_W = 2.6;                          // 歩道の幅
-let DETAIL = LITE ? 11 : 18;                 // ここまでは石を1つずつ描く
+let DETAIL = 18;                // ここまでは石を1つずつ描く
 const FOG = [16, 11, 28];                    // 遠くが溶けていく色
 
 const hash2 = (a, b) => jitter(a * 157.31 + b * 311.7 + 0.5);
@@ -266,7 +269,26 @@ function lightAt(x, z, lights) {
 
 const scale = (v, k) => v.map((x) => x * k);
 
+// スマホでは同じ色の石をまとめて塗る（Map<層, Map<色, Path2D>>）。
+// まとめやすいよう、そのときは明るさともやを細かい段階に丸める
+let batch = null;
+const LAYERS = ['base', 'stones', 'edges', 'curbs']; // 塗る順番
+
+function flushBatch() {
+  for (const layer of LAYERS) {
+    for (const [fill, path] of batch.get(layer) ?? []) {
+      sc.fillStyle = fill;
+      sc.fill(path);
+    }
+  }
+  batch = null;
+}
+
 function color(base, warm, fog, tint = [1, 0.9, 1.25]) {
+  if (batch) {
+    base = Math.round(base / 0.025) * 0.025;
+    fog = Math.round(fog / 0.08) * 0.08;
+  }
   warm ||= [0, 0, 0];
   const c = tint.map((t, i) => base * 62 * t + warm[i] * 165);
   return `rgb(${c.map((v, i) => Math.round(v + (FOG[i] - v) * fog)).join(',')})`;
@@ -287,17 +309,27 @@ function clipNear(ps) {
   return out;
 }
 
-// ワールド座標の4点を結んで塗る
-function poly(points, fill) {
+// ワールド座標の4点を結んで塗る（まとめ塗り中は層と色ごとのパスに足すだけ）
+function poly(points, fill, layer = 'stones') {
   const clipped = clipNear(points.map(([x, y, z]) => toCam(x, y, z)));
   if (clipped.length < 3) return;
   const ps = clipped.map(screenOf);
-  sc.beginPath();
-  sc.moveTo(ps[0].sx, ps[0].sy);
-  for (let i = 1; i < ps.length; i++) sc.lineTo(ps[i].sx, ps[i].sy);
-  sc.closePath();
-  sc.fillStyle = fill;
-  sc.fill();
+  let path = sc;
+  if (batch) {
+    if (!batch.has(layer)) batch.set(layer, new Map());
+    const byColor = batch.get(layer);
+    if (!byColor.has(fill)) byColor.set(fill, new Path2D());
+    path = byColor.get(fill);
+  } else {
+    sc.beginPath();
+  }
+  path.moveTo(ps[0].sx, ps[0].sy);
+  for (let i = 1; i < ps.length; i++) path.lineTo(ps[i].sx, ps[i].sy);
+  path.closePath();
+  if (!batch) {
+    sc.fillStyle = fill;
+    sc.fill();
+  }
 }
 
 // 互い違いの石を xMin〜xMax に敷く
@@ -320,7 +352,7 @@ function paveStones(xMin, xMax, y, rowLen, stoneW, gap, tone, lights, seed) {
       if (fog < 0.6) {
         const e = (z1 - z0) * 0.18;
         poly([[x0, y, z0], [x1, y, z0], [x1, y, z0 + e], [x0, y, z0 + e]],
-          color(base * 1.25, scale(warm, 1.15), fog));
+          color(base * 1.25, scale(warm, 1.15), fog), 'edges');
       }
     }
   }
@@ -337,8 +369,8 @@ function drawCurbs(lights) {
       const zm = (z0 + z1) / 2;
       const fog = clamp((zm - cam.z - DETAIL * 0.45) / (DETAIL * 0.55));
       const warm = zm - cam.z < DETAIL ? scale(lightAt(xi, zm, lights), 0.6) : null;
-      poly([[xi, 0, z0], [xi, CURB_H, z0], [xi, CURB_H, z1], [xi, 0, z1]], color(0.55, warm && scale(warm, 0.6), fog));
-      poly([[xi, CURB_H, z0], [xo, CURB_H, z0], [xo, CURB_H, z1], [xi, CURB_H, z1]], color(1.05, warm, fog));
+      poly([[xi, 0, z0], [xi, CURB_H, z0], [xi, CURB_H, z1], [xi, 0, z1]], color(0.55, warm && scale(warm, 0.6), fog), 'curbs');
+      poly([[xi, CURB_H, z0], [xo, CURB_H, z0], [xo, CURB_H, z1], [xi, CURB_H, z1]], color(1.05, warm, fog), 'curbs');
     }
   }
 }
@@ -391,7 +423,7 @@ function drawRoad(lights) {
   const near = cam.z - 3, far = cam.z + FAR;
   for (const side of [-1, 1]) {
     const x0 = side * (ROAD + CURB_W), x1 = side * (ROAD + CURB_W + WALK_W);
-    poly([[x0, CURB_H, near], [x1, CURB_H, near], [x1, CURB_H, far], [x0, CURB_H, far]], color(0.5, 0, 0.35));
+    poly([[x0, CURB_H, near], [x1, CURB_H, near], [x1, CURB_H, far], [x0, CURB_H, far]], color(0.5, 0, 0.35), 'base');
   }
 
   paveStones(-ROAD, ROAD, 0, ROW, STONE, GAP, 0.4, lights, 0);
@@ -400,6 +432,7 @@ function drawRoad(lights) {
     paveStones(Math.min(a, b), Math.max(a, b), CURB_H, SLAB, SLAB * 1.15, 0.035, 0.34, lights, side * 50);
   }
   drawCurbs(lights);
+  if (batch) flushBatch();
 
   // 地平線のもや
   const haze = sc.createLinearGradient(0, hz - H * 0.1, 0, hz + H * 0.12);
@@ -448,23 +481,17 @@ function drawLanterns(items) {
     const x = p.sx - size / 2, y = p.sy - size * 0.9; // カボチャの底（画像の 0.9）を地面に合わせる
 
     // 濡れた敷石への映り込み（小さいランタンは省く）
-    if (size > (LITE ? 110 : 50) * dpr) {
+    if (size > 50 * dpr) {
     sc.save();
     sc.translate(0, p.sy * 2);
     sc.scale(1, -1);
     drawLanternAt(sc, sprite, it.light, x, y, size, 0.16 * fog);
     sc.restore();
+    // 縦に伸ばしたぼかしの円で、濡れた路面の光の筋にする
     sc.save();
     sc.globalCompositeOperation = 'lighter';
-    sc.globalAlpha = 0.3 * it.light * fog;
-    // 縦に伸ばしたぼかしの円で、濡れた路面の光の筋にする
-    sc.translate(p.sx, p.sy + size * 0.1);
-    sc.scale(0.3, 1);
-    const streak = sc.createRadialGradient(0, 0, 0, 0, 0, size * 0.6);
-    streak.addColorStop(0, rgba(it.rgb, 0.8));
-    streak.addColorStop(1, rgba(it.rgb, 0));
-    sc.fillStyle = streak;
-    sc.fillRect(-size * 0.6, -size * 0.6, size * 1.2, size * 1.2);
+    sc.globalAlpha = 0.26 * it.light * fog;
+    sc.drawImage(glowOf(it), p.sx - size * 0.18, p.sy + size * 0.1 - size * 0.6, size * 0.36, size * 1.2);
     sc.restore();
     }
 
@@ -496,39 +523,106 @@ function vignette() {
   sc.drawImage(vignetteCache, 0, 0);
 }
 
-// 重い状態が続いたら、石畳を細かく描く距離 → 解像度の順に下げる
-let avgFrame = 16, lastNow = 0, calmUntil = 0;
-function adapt(now) {
-  const dt = Math.min(now - lastNow, 100);
-  lastNow = now;
-  avgFrame += (dt - avgFrame) * 0.05;
-  if (now < calmUntil || avgFrame < 28) return;
-  if (DETAIL > 8) DETAIL -= 3;
-  else if (resScale > 0.5) {
+// 描くのに時間がかかる状態が続いたら、30fps → 石畳を細かく描く距離 → 解像度の順に下げる
+// （画質に関わるものは最後）
+let avgWork = 0, calmUntil = 0;
+function adapt(now, work) {
+  avgWork += (work - avgWork) * 0.05;
+  if (now < calmUntil || avgWork < 12) return;
+  if (!frameMs) frameMs = 32;
+  else if (avgWork < 24) return; // 30fps ならこのくらいまでは間に合う
+  else if (DETAIL > 10) DETAIL -= 2;
+  else if (resScale > 0.6) {
     resScale -= 0.1;
     resize();
   } else return;
-  avgFrame = 16;
-  calmUntil = now + 1500; // 下げた効果が出るまで待つ
+  avgWork = 0;
+  calmUntil = now + 2000; // 下げた効果が出るまで待つ
 }
 
+// ランタンの色の、ぼかした円（作り置きして、光だまりと光の筋に使う）
+function glowOf(it) {
+  if (!it.glow) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, rgba(it.rgb, 1));
+    grad.addColorStop(0.35, rgba(it.rgb, 0.5));
+    grad.addColorStop(1, rgba(it.rgb, 0));
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    it.glow = c;
+  }
+  return it.glow;
+}
+
+// スマホ用の照り返し: 石を1枚ずつ照らす代わりに、ランタンの足元に地面に沿って潰れた光だまりを重ねる
+const POOL_R = 1.8;
+function drawLightPools(items) {
+  sc.save();
+  sc.globalCompositeOperation = 'lighter';
+  for (const { it } of items) {
+    const p = project(it.x, 0, it.z);
+    if (!p || p.dz > DETAIL + 3) continue;
+    const rx = POOL_R * p.s, ry = rx * clamp(cam.h / p.dz, 0.04, 1);
+    sc.globalAlpha = Math.min(1, 0.95 * it.light);
+    sc.drawImage(glowOf(it), p.sx - rx, p.sy - ry, rx * 2, ry * 2);
+  }
+  sc.restore();
+}
+
+// スマホでは道の土台を画像として取っておき、カメラが動いたときだけ（同じ色の石をまとめて）描き直す
+let roadCache = null, roadKey = '';
+function drawRoadCached() {
+  const key = [cam.x, cam.z, cam.h, cam.yaw].map((v) => v.toFixed(3)).join() + `|${W}x${H}|${DETAIL}`;
+  if (!roadCache || roadKey !== key) {
+    if (!roadCache || roadCache.width !== W || roadCache.height !== H) {
+      roadCache = document.createElement('canvas');
+      roadCache.width = W;
+      roadCache.height = H;
+    }
+    sc = roadCache.getContext('2d');
+    sc.clearRect(0, 0, W, H);
+    batch = new Map();
+    drawRoad([]);
+    sc = screenCtx;
+    roadKey = key;
+  }
+  sc.drawImage(roadCache, 0, 0);
+}
+
+let lastDraw = 0;
 function tick(now) {
-  adapt(now);
+  requestAnimationFrame(tick);
+  if (now - lastDraw < frameMs) return;
+  const dt = Math.min(now - lastDraw, 100);
+  lastDraw = now;
+  const started = performance.now();
   const t = now / 1000;
   const heard = ears.read();
-  for (const k of ['x', 'z', 'h', 'yaw']) cam[k] += (target[k] - cam[k]) * 0.08;
+  // フレームの間隔によらず同じ速さで近づく
+  const k = 1 - Math.pow(0.92, dt / 16.7);
+  for (const key of ['x', 'z', 'h', 'yaw']) {
+    cam[key] += (target[key] - cam[key]) * k;
+    if (Math.abs(target[key] - cam[key]) < 1e-4) cam[key] = target[key];
+  }
 
   sc.clearRect(0, 0, W, H);
   if (W && H) {
     const items = visibleLanterns(t, heard);
     // 石を照らす計算は、近くのランタン8個までにする
     const lights = items.filter((i) => i.p.dz < DETAIL + 3).slice(-8).map(({ it }) => ({ x: it.x, z: it.z, light: it.light, rgb: it.rgb }));
-    drawRoad(lights);
+    if (LITE) {
+      drawRoadCached();
+      drawLightPools(items);
+    } else {
+      drawRoad(lights);
+    }
     drawLanterns(items);
     vignette();
   }
-
-  requestAnimationFrame(tick);
+  adapt(now, performance.now() - started);
 }
 
 async function main() {
