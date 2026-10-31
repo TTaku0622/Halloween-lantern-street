@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ランタンを彫る</title>
+  <meta name="description" content="カボチャを彫って、ランタン通りに灯しましょう。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="moon" aria-hidden="true"></div>
+    <h1 class="title">ランタンを彫る</h1>
+    <p>カボチャの上をなぞると、そこがくり抜かれます。「塗り」で囲むと、囲んだ形ごと抜けます。</p>
+  </header>
+
+  <main class="maker">
+    <div class="board">
+      <canvas id="board" width="1040" height="1040"></canvas>
+    </div>
+
+    <div class="panel">
+      <section>
+        <h2>彫り方</h2>
+        <div class="group" id="tools">
+          <button class="btn" data-mode="l" data-w="0.016" aria-pressed="false">細い線</button>
+          <button class="btn" data-mode="l" data-w="0.032" aria-pressed="true">線</button>
+          <button class="btn" data-mode="l" data-w="0.058" aria-pressed="false">太い線</button>
+          <button class="btn" data-mode="f" data-w="0.01" aria-pressed="false">塗り</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>やり直す</h2>
+        <div class="group">
+          <button class="btn" id="undo">1つ戻す</button>
+          <button class="btn" id="clear">全部消す</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>灯りを試す</h2>
+        <div class="group">
+          <button class="btn" id="ears" aria-pressed="false">🎙 周りの音で灯す</button>
+        </div>
+        <p class="note">マイクの音はこの端末の中で大きさを測るだけで、録音も送信もしません。</p>
+      </section>
+
+      <section>
+        <h2>ニックネーム（なくても大丈夫）</h2>
+        <input type="text" id="name" maxlength="20" placeholder="名無しのおばけ" autocomplete="off" aria-label="ニックネーム">
+        <p class="note">通りに公開されるので、本名は書かないでください。</p>
+      </section>
+
+      <section>
+        <div class="group">
+          <button class="btn primary" id="post" disabled>通りに灯す</button>
+          <a class="btn" href="/">通りに戻る</a>
+        </div>
+        <p class="status" id="status" role="status"></p>
+        <p class="note">灯したランタンは、通りに公開されます。</p>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="/js/make.js"></script>
+</body>
+</html>

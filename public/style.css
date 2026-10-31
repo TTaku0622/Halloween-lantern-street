@@ -1,0 +1,190 @@
+:root {
+  --sky-top: #07051a;
+  --sky-bottom: #1d1236;
+  --text: #f4e9d8;
+  --muted: #a99bbf;
+  --accent: #ff9a2a;
+  --accent-ink: #2a1203;
+  --panel: rgba(20, 12, 38, 0.85);
+  --line: rgba(255, 255, 255, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  color: var(--text);
+  background: linear-gradient(var(--sky-top), var(--sky-bottom) 70%, #120b22) fixed;
+  font-family: "Zen Maru Gothic", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+/* 星 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 9%, #fff9 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 38% 30%, #fff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 34%, #fff7 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 14%, #fff5 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 22% 42%, #fff4 50%, transparent 51%);
+}
+
+.title {
+  font-family: "Yusei Magic", "Zen Maru Gothic", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+header {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 16px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+header h1 { margin: 0; font-size: clamp(28px, 6vw, 40px); }
+header p { margin: 0; color: var(--muted); font-size: 14px; flex-basis: 100%; }
+
+/* 月 */
+.moon {
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f6edc8;
+  box-shadow: 0 0 40px 8px #f6edc855;
+  z-index: -1;
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.12); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn[aria-pressed="true"] { background: #ffd76a; color: var(--accent-ink); border-color: transparent; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.note { color: var(--muted); font-size: 12px; }
+
+/* 通り（奥へ続く道を canvas に描く） */
+.street {
+  position: relative;
+  margin-top: 8px;
+}
+#scene {
+  display: block;
+  width: 100%;
+  height: max(420px, calc(100vh - 230px));
+  cursor: grab;
+  touch-action: none;
+}
+#scene:active { cursor: grabbing; }
+#scene:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.street-msg {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 30%;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+.street-msg:empty { display: none; }
+
+.walk {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 24px;
+}
+
+/* 1つのランタンを見る */
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 20px;
+  width: min(480px, calc(100vw - 32px));
+  backdrop-filter: blur(8px);
+}
+dialog::backdrop { background: rgba(4, 2, 12, 0.7); }
+dialog canvas { width: 100%; aspect-ratio: 1; display: block; }
+dialog h2 { margin: 0; font-size: 22px; }
+dialog .meta { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+dialog .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.report { font-size: 13px; padding: 6px 12px; }
+
+/* 彫る画面 */
+.maker {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 8px 16px 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .maker { grid-template-columns: 1fr; }
+}
+
+.board {
+  position: relative;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 60%, #2a1a40, #120b22 70%);
+  border: 1px solid var(--line);
+  touch-action: none;
+}
+.board canvas { width: 100%; aspect-ratio: 1; display: block; cursor: crosshair; }
+
+.panel { display: flex; flex-direction: column; gap: 18px; }
+.panel h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 400; }
+.group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+input[type="text"] {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+input[type="text"]::placeholder { color: var(--muted); }
+
+.status { min-height: 1.6em; font-size: 14px; color: #ffd76a; }
+
+a { color: #ffd76a; }

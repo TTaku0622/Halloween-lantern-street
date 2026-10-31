@@ -1,0 +1,14 @@
+{
+  "name": "lantern-street",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lantern-street",
+      // wrangler d1 create のあとに本物の ID に置き換える
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

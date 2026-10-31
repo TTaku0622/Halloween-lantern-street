@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ランタン通り</title>
+  <meta name="description" content="みんなが彫ったカボチャのランタンが並ぶ夜の通り。周りの音に合わせて灯りが揺れます。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="moon" aria-hidden="true"></div>
+    <h1 class="title">ランタン通り</h1>
+    <p>みんなが彫ったカボチャのランタンが並ぶ夜の通り。「周りの音で灯す」をオンにすると、あなたのまわりの音で灯りが揺れます。</p>
+    <div class="actions">
+      <a class="btn primary" href="/make">🎃 ランタンを彫る</a>
+      <button class="btn" id="ears" aria-pressed="false">🎙 周りの音で灯す</button>
+    </div>
+    <p class="note">マイクの音はこの端末の中で大きさを測るだけで、録音も送信もしません。</p>
+  </header>
+
+  <main class="street" id="street">
+    <canvas id="scene" tabindex="0" aria-label="ランタン通り。上下キー・スクロール・ドラッグで歩けます。ランタンを押すと大きく見られます。"></canvas>
+    <p class="street-msg" id="msg">ランタンを運んでいます…</p>
+    <div class="walk">
+      <button class="btn" id="back" aria-label="戻る">↓ 戻る</button>
+      <span class="note">スクロール・ドラッグで通りを歩く</span>
+      <button class="btn" id="forward" aria-label="進む">↑ 進む</button>
+    </div>
+  </main>
+
+  <dialog id="detail">
+    <canvas width="720" height="720"></canvas>
+    <h2 class="title"></h2>
+    <p class="meta"></p>
+    <div class="row">
+      <button class="btn report" id="report">通報する</button>
+      <button class="btn" id="close">閉じる</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="/js/street.js"></script>
+</body>
+</html>
