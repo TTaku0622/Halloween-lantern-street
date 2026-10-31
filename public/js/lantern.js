@@ -77,112 +77,36 @@ export function drawStrokes(ctx, strokes, s) {
 
 function drawStem(ctx, s, lit) {
   ctx.beginPath();
-  ctx.moveTo(0.46 * s, 0.32 * s); // 根元はヘタのくぼみの中まで伸ばす（本体の後ろに隠れる）
+  ctx.moveTo(0.46 * s, 0.27 * s);
   ctx.quadraticCurveTo(0.46 * s, 0.17 * s, 0.53 * s, 0.12 * s);
   ctx.lineTo(0.565 * s, 0.145 * s);
-  ctx.quadraticCurveTo(0.525 * s, 0.19 * s, 0.545 * s, 0.32 * s);
+  ctx.quadraticCurveTo(0.525 * s, 0.19 * s, 0.545 * s, 0.27 * s);
   ctx.closePath();
   ctx.fillStyle = lit ? '#6b7a2c' : '#2b3313';
   ctx.fill();
 }
 
-// カボチャ本体。縦の房を球の経線として描き、angle だけ回した姿にする
-// angle > 0 で顔が画面の右へ回る
-const RIBS = 10;
-
-function mixHex(a, b, t) {
-  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-  const ch = (p, k) => (p >> k) & 255;
-  return `rgb(${[16, 8, 0].map((k) => Math.round(ch(pa, k) + (ch(pb, k) - ch(pa, k)) * t)).join(',')})`;
-}
-
-// 房の境目（経線）の画面上の位置。高さ t での横幅を (1 - t²)^0.38 にして、
-// 楕円よりふっくら張り出したカボチャらしい形にする
-const BODY_W = 0.97; // 本体の横幅（RX に対する比）
-const STEPS = 24;
-const widthAt = (t) => Math.pow(Math.max(0, 1 - t * t), 0.38);
-
-function meridian(s, phi, reverse) {
-  const cx = CX * s, cy = CY * s, rx = RX * BODY_W * s, ry = RY * s;
-  const pts = [];
-  for (let i = 0; i <= STEPS; i++) {
-    const t = -1 + (2 * i) / STEPS;
-    const w = widthAt(t);
-    // ヘタの付け根と底を少しくぼませて、上下を平らにする
-    const dip = Math.pow(1 - w, 3) * ry * (t < 0 ? 0.16 : -0.07);
-    pts.push([cx + Math.sin(phi) * rx * w, cy + t * ry + dip]);
-  }
-  return reverse ? pts.reverse() : pts;
-}
-
-// カボチャの輪郭のパスを作る
-function silhouette(ctx, s) {
-  ctx.beginPath();
-  const right = meridian(s, Math.PI / 2, false), left = meridian(s, -Math.PI / 2, true);
-  ctx.moveTo(right[0][0], right[0][1]);
-  for (const [x, y] of right) ctx.lineTo(x, y);
-  for (const [x, y] of left) ctx.lineTo(x, y);
-  ctx.closePath();
-}
-
-function drawBody(ctx, s, lit, angle) {
+function drawBody(ctx, s, lit) {
+  // 外側の房から順に重ねる [中心のずれ, 横幅]
+  const lobes = [[-0.36, 0.6], [0.36, 0.6], [-0.17, 0.66], [0.17, 0.66], [0, 0.62]];
   const stops = lit
     ? ['#ffb04a', '#e8671a', '#8a340b']
     : ['#8e4716', '#55260b', '#241005'];
-  const cx = CX * s, cy = CY * s, rx = RX * BODY_W * s, ry = RY * s;
-
-  // 下地（房の隙間が見えないように）
-  silhouette(ctx, s);
-  ctx.fillStyle = stops[2];
-  ctx.fill();
-
-  // 正面に房の真ん中が来るよう、境目を半分ずらす（正面にまっすぐな線が出ないように）
-  for (let k = 0; k < RIBS; k++) {
-    let a = ((k + 0.5) / RIBS) * Math.PI * 2 + angle;
-    let b = ((k + 1.5) / RIBS) * Math.PI * 2 + angle;
-    // こちら側（cos > 0）の部分だけ描く
-    const vis = (p) => Math.cos(p) > 0;
-    if (!vis(a) && !vis(b)) continue;
-    // 見えている側（-π/2〜π/2 の周期）に収める
-    const v = vis(a) ? a : b;
-    const lo = Math.floor((v + Math.PI / 2) / (Math.PI * 2)) * Math.PI * 2 - Math.PI / 2;
-    a = Math.max(a, lo);
-    b = Math.min(b, lo + Math.PI);
-    const mid = (a + b) / 2;
-    const facing = Math.max(0, Math.cos(mid)); // 正面を向いている房ほど明るい
-
-    const left = meridian(s, a, false), right = meridian(s, b, true);
+  for (const [dx, w] of lobes) {
+    const x = (CX + dx * RX) * s, y = CY * s;
+    const rx = RX * w * s, ry = RY * s;
+    const g = ctx.createRadialGradient(x - rx * 0.25, y - ry * 0.35, ry * 0.05, x, y, Math.max(rx, ry) * 1.05);
+    g.addColorStop(0, stops[0]);
+    g.addColorStop(0.6, stops[1]);
+    g.addColorStop(1, stops[2]);
     ctx.beginPath();
-    ctx.moveTo(left[0][0], left[0][1]);
-    for (const [x, y] of left) ctx.lineTo(x, y);
-    for (const [x, y] of right) ctx.lineTo(x, y);
-    ctx.closePath();
-
-    const xa = cx + Math.sin(a) * rx, xb = cx + Math.sin(b) * rx;
-    const g = ctx.createLinearGradient(Math.min(xa, xb), 0, Math.max(xa, xb) + 0.01, 0);
-    // 房の端は少しだけ暗く、正面を向いた房ほど明るく
-    const edge = mixHex(stops[2], stops[1], 0.25 + 0.5 * facing);
-    g.addColorStop(0, edge);
-    g.addColorStop(0.5, mixHex(stops[1], stops[0], 0.15 + 0.85 * facing));
-    g.addColorStop(1, edge);
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.lineWidth = s * 0.004;
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = s * 0.005;
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
     ctx.stroke();
   }
-
-  // 全体の陰影（上が明るく下が暗い）
-  ctx.save();
-  silhouette(ctx, s);
-  ctx.clip();
-  const shade = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
-  shade.addColorStop(0, 'rgba(255,230,180,0.12)');
-  shade.addColorStop(0.55, 'rgba(0,0,0,0)');
-  shade.addColorStop(1, 'rgba(0,0,0,0.35)');
-  ctx.fillStyle = shade;
-  ctx.fillRect(cx - rx, cy - ry, rx * 2, ry * 2);
-  ctx.restore();
 }
 
 // 彫った形を mask にして、好きな塗りで染めたキャンバスを返す
@@ -205,46 +129,6 @@ function glowPaint(s, f) {
   };
 }
 
-// 顔（正面から見た平らな絵）を細かいます目に切って、カボチャの表面に沿って angle だけ回して貼る
-// 高さごとにカボチャの横幅が違うので、行ごとにその幅の上で回す（上下の端で顔が外へ浮かないように）
-function wrapFace(ctx, tex, s, angle) {
-  // 行は細かく（粗いと端で顔の縁が階段状になる）、列はそこそこで足りる
-  const cols = s > 400 ? 28 : 14, rows = s > 400 ? 96 : 28;
-  const cx = CX * s, cy = CY * s, rx = RX * s, ry = RY * s, bodyRx = RX * BODY_W * s;
-  const top = Math.round(cy - ry), bottom = Math.round(cy + ry);
-  for (let r = 0; r < rows; r++) {
-    const y0 = Math.round(top + ((bottom - top) * r) / rows);
-    const y1 = Math.round(top + ((bottom - top) * (r + 1)) / rows);
-    if (y1 <= y0) continue;
-    const half = bodyRx * widthAt(((y0 + y1) / 2 - cy) / ry); // この高さでのカボチャの半分の幅
-    if (half < 1) continue;
-    for (let i = 0; i < cols; i++) {
-      const u0 = -1 + (2 * i) / cols, u1 = -1 + (2 * (i + 1)) / cols;
-      const q0 = (u0 * rx) / half, q1 = (u1 * rx) / half; // 表面上の位置（-1〜1）
-      if (q1 <= -1 || q0 >= 1) continue; // カボチャの外
-      const p0 = Math.asin(Math.max(-1, q0)) + angle, p1 = Math.asin(Math.min(1, q1)) + angle;
-      const c = Math.cos((p0 + p1) / 2);
-      if (c <= 0.02) continue; // 向こう側に回った部分
-      // 境目をピクセルに揃えて、隣のます目と隙間も重なりも出ないようにする
-      const x0 = Math.round(cx + Math.sin(p0) * half), x1 = Math.round(cx + Math.sin(p1) * half);
-      if (x1 <= x0) continue;
-      ctx.globalAlpha = Math.min(1, c / 0.3);
-      const sx0 = cx + Math.max(u0 * rx, -half), sx1 = cx + Math.min(u1 * rx, half);
-      ctx.drawImage(tex, sx0, y0, sx1 - sx0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
-    }
-  }
-  ctx.globalAlpha = 1;
-}
-
-// カボチャの輪郭の内側だけに顔を貼る
-function wrapFaceClipped(ctx, tex, s, angle) {
-  ctx.save();
-  silhouette(ctx, s);
-  ctx.clip();
-  wrapFace(ctx, tex, s, angle);
-  ctx.restore();
-}
-
 export function buildLantern(strokes, s, color = DEFAULT_COLOR) {
   const f = flameColors(color);
   const mask = makeCanvas(s), m = mask.getContext('2d');
@@ -257,82 +141,61 @@ export function buildLantern(strokes, s, color = DEFAULT_COLOR) {
   const wall = s * 0.014; // 皮の厚み（穴の上側に見える）
   const glow = tinted(mask, s, glowPaint(s, f));
 
-  // 消灯時の穴
-  const faceUnlit = makeCanvas(s), u = faceUnlit.getContext('2d');
+  // 消灯: 暗いカボチャに暗い穴
+  const unlit = makeCanvas(s), u = unlit.getContext('2d');
+  drawStem(u, s, false);
+  drawBody(u, s, false);
   u.drawImage(tinted(mask, s, (x) => { x.fillStyle = '#3b1a07'; x.fillRect(0, 0, s, s); }), 0, 0);
   u.drawImage(tinted(mask, s, (x) => { x.fillStyle = '#0d0502'; x.fillRect(0, 0, s, s); }, 0, wall), 0, 0);
 
-  // 点灯時の穴（皮の厚み → 中の光）
-  const faceLit = tinted(mask, s, (x) => { x.fillStyle = rgba(f.wall, 1); x.fillRect(0, 0, s, s); });
-  const hx = faceLit.getContext('2d');
-  hx.globalCompositeOperation = 'source-atop';
-  hx.drawImage(glow, 0, wall);
-
-  // 穴からのにじみ
-  const faceGlow = makeCanvas(s), gx = faceGlow.getContext('2d');
-  gx.shadowColor = rgba(f.mid, 0.9);
-  gx.shadowBlur = s * 0.05;
-  gx.globalAlpha = 0.6;
-  gx.drawImage(glow, 0, 0);
-
-  return { s, f, faceUnlit, faceLit, faceGlow, cache: null };
-}
-
-// angle（ラジアン）から見た「消灯」「点灯」の2枚。同じくらいの角度なら作り直さない
-// canRender が false のときは、角度が少し古くても前に作った絵を使う（重いフレームを避ける）
-export function lanternAt(L, angle, step = 0.05, canRender = true) {
-  const key = Math.round(angle / step);
-  if (L.cache && (L.cache.key === key || !canRender)) return L.cache;
-  const a = key * step, s = L.s, f = L.f;
-
-  const unlit = L.cache?.unlit ?? makeCanvas(s), lit = L.cache?.lit ?? makeCanvas(s);
-  const u = unlit.getContext('2d'), l = lit.getContext('2d');
-  u.clearRect(0, 0, s, s);
-  l.clearRect(0, 0, s, s);
-
-  drawStem(u, s, false);
-  drawBody(u, s, false, a);
-  wrapFaceClipped(u, L.faceUnlit, s, a);
-
+  // 点灯: 周りの光 → 明るい皮 → 皮の厚み → 中の光 → にじみ
+  const lit = makeCanvas(s), l = lit.getContext('2d');
   const halo = l.createRadialGradient(CX * s, CY * s, RX * s * 0.6, CX * s, CY * s, s * 0.5);
   halo.addColorStop(0, rgba(f.base, 0.45));
   halo.addColorStop(1, rgba(f.base, 0));
   l.fillStyle = halo;
   l.fillRect(0, 0, s, s);
   drawStem(l, s, true);
-  drawBody(l, s, true, a);
+  drawBody(l, s, true);
   // 中の灯りの色が皮に少し透ける
   l.save();
   l.globalCompositeOperation = 'source-atop';
   l.fillStyle = rgba(f.base, 0.28);
   l.fillRect(0, 0, s, s);
   l.restore();
-  wrapFaceClipped(l, L.faceLit, s, a);
+
+  const hole = tinted(mask, s, (x) => { x.fillStyle = rgba(f.wall, 1); x.fillRect(0, 0, s, s); });
+  const hx = hole.getContext('2d');
+  hx.globalCompositeOperation = 'source-atop';
+  hx.drawImage(glow, 0, wall);
+  l.drawImage(hole, 0, 0);
+
   l.save();
   l.globalCompositeOperation = 'lighter';
-  wrapFaceClipped(l, L.faceGlow, s, a);
+  l.shadowColor = rgba(f.mid, 0.9);
+  l.shadowBlur = s * 0.05;
+  l.globalAlpha = 0.6;
+  l.drawImage(glow, 0, 0);
   l.restore();
 
-  L.cache = { key, unlit, lit };
-  return L.cache;
+  return { unlit, lit };
 }
 
-export function drawFrame(ctx, L, light, angle = 0) {
+export function drawFrame(ctx, lantern, light) {
   const { width: w, height: h } = ctx.canvas;
-  const v = lanternAt(L, angle);
   ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(v.unlit, 0, 0, w, h);
+  ctx.drawImage(lantern.unlit, 0, 0, w, h);
   ctx.globalAlpha = Math.max(0, Math.min(1, light));
-  ctx.drawImage(v.lit, 0, 0, w, h);
+  ctx.drawImage(lantern.lit, 0, 0, w, h);
   ctx.globalAlpha = 1;
 }
 
-// 大きなキャンバスの好きな位置に描く（通りの3D表示用）。view は lanternAt の結果
-export function drawLanternAt(ctx, view, light, x, y, size, alpha = 1) {
+// 大きなキャンバスの好きな位置に描く（通りの3D表示用）
+export function drawLanternAt(ctx, lantern, light, x, y, size, alpha = 1) {
   ctx.globalAlpha = alpha;
-  ctx.drawImage(view.unlit, x, y, size, size);
+  ctx.drawImage(lantern.unlit, x, y, size, size);
   ctx.globalAlpha = alpha * Math.max(0, Math.min(1, light));
-  ctx.drawImage(view.lit, x, y, size, size);
+  ctx.drawImage(lantern.lit, x, y, size, size);
   ctx.globalAlpha = 1;
 }
 

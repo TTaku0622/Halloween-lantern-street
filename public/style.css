@@ -129,36 +129,22 @@ header p { margin: 0; color: var(--muted); font-size: 14px; flex-basis: 100%; }
   padding: 10px 16px 24px;
 }
 
-/* 近づいて見ているランタンの案内 */
-.focus-panel {
-  position: absolute;
-  left: 50%;
-  bottom: 84px;
-  transform: translateX(-50%);
-  width: min(440px, calc(100% - 32px));
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 14px 18px;
+/* 1つのランタンを見る */
+dialog {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
+  color: var(--text);
+  padding: 20px;
+  width: min(480px, calc(100vw - 32px));
   backdrop-filter: blur(8px);
-  animation: rise 0.5s ease-out;
 }
-.focus-panel[hidden] { display: none; }
-.focus-panel h2 { margin: 0; font-size: 20px; }
-.focus-panel .meta { margin: 0; color: var(--muted); font-size: 12px; }
-.focus-panel .row { display: flex; gap: 8px; }
+dialog::backdrop { background: rgba(4, 2, 12, 0.7); }
+dialog canvas { width: 100%; aspect-ratio: 1; display: block; }
+dialog h2 { margin: 0; font-size: 22px; }
+dialog .meta { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+dialog .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .report { font-size: 13px; padding: 6px 12px; }
-@keyframes rise {
-  from { opacity: 0; transform: translate(-50%, 12px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .focus-panel { animation: none; }
-}
 
 /* 彫る画面 */
 .maker {
