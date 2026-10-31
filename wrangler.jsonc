@@ -7,7 +7,9 @@
     {
       "binding": "DB",
       "database_name": "lantern-street",
-      "database_id": "a03563bd-5ecb-4bb4-8789-7a9081805b0b"
+      "database_id": "a03563bd-5ecb-4bb4-8789-7a9081805b0b",
+      // ローカル（wrangler dev）では本番と別の、テスト用のデータベースを使う
+      "preview_database_id": "00000000-0000-0000-0000-000000000000"
     }
   ]
 }

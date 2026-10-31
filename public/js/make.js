@@ -1,4 +1,4 @@
-import { buildLantern, drawFrame, drawStrokes, clipPumpkin, flicker } from './lantern.js';
+import { buildLantern, drawFrame, drawStrokes, clipPumpkin, flicker, DEFAULT_COLOR } from './lantern.js';
 import { Ears, nextLight } from './sound.js';
 
 const MAX_POINTS = 4000; // worker.js と同じ上限
@@ -13,7 +13,8 @@ const earsBtn = document.getElementById('ears');
 
 const ears = new Ears();
 const strokes = [];
-let lantern = buildLantern(strokes, S);
+let color = DEFAULT_COLOR;
+let lantern = buildLantern(strokes, S, color);
 let current = null; // 今なぞっている線
 let mode = 'l';
 let width = 0.032;
@@ -22,7 +23,7 @@ let light = 0.6;
 const pointCount = () => strokes.reduce((n, st) => n + st.p.length, 0);
 
 function rebuild() {
-  lantern = buildLantern(strokes, S);
+  lantern = buildLantern(strokes, S, color);
   postBtn.disabled = strokes.length === 0;
 }
 
@@ -77,6 +78,28 @@ document.getElementById('clear').addEventListener('click', () => {
   rebuild();
 });
 
+// 灯りの色（用意した色か、自由に選んだ色）
+const swatches = document.getElementById('swatches');
+const custom = document.getElementById('custom-color');
+
+function pickColor(value, chosen) {
+  color = value;
+  for (const el of swatches.querySelectorAll('.swatch')) el.setAttribute('aria-pressed', String(el === chosen));
+  rebuild();
+}
+
+swatches.addEventListener('click', (e) => {
+  const btn = e.target.closest('button.swatch');
+  if (btn) pickColor(btn.dataset.color, btn);
+});
+function pickCustom() {
+  const label = custom.closest('.swatch');
+  label.style.setProperty('--c', custom.value);
+  pickColor(custom.value, label);
+}
+custom.addEventListener('input', pickCustom);
+custom.addEventListener('click', pickCustom); // 前に選んだ自由な色に戻すとき
+
 earsBtn.addEventListener('click', async () => {
   if (ears.on) {
     ears.stop();
@@ -98,7 +121,7 @@ postBtn.addEventListener('click', async () => {
     const res = await fetch('/api/lanterns', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: document.getElementById('name').value, strokes }),
+      body: JSON.stringify({ name: document.getElementById('name').value, strokes, color }),
     });
     if (res.status === 429) throw new Error('少し時間をおいてから灯してください（1時間に10個まで）');
     if (!res.ok) throw new Error('灯せませんでした。もう一度試してください');

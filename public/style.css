@@ -129,22 +129,36 @@ header p { margin: 0; color: var(--muted); font-size: 14px; flex-basis: 100%; }
   padding: 10px 16px 24px;
 }
 
-/* 1つのランタンを見る */
-dialog {
+/* 近づいて見ているランタンの案内 */
+.focus-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 14px 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
-  color: var(--text);
-  padding: 20px;
-  width: min(480px, calc(100vw - 32px));
   backdrop-filter: blur(8px);
+  animation: rise 0.5s ease-out;
 }
-dialog::backdrop { background: rgba(4, 2, 12, 0.7); }
-dialog canvas { width: 100%; aspect-ratio: 1; display: block; }
-dialog h2 { margin: 0; font-size: 22px; }
-dialog .meta { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
-dialog .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.focus-panel[hidden] { display: none; }
+.focus-panel h2 { margin: 0; font-size: 20px; }
+.focus-panel .meta { margin: 0; color: var(--muted); font-size: 12px; }
+.focus-panel .row { display: flex; gap: 8px; }
 .report { font-size: 13px; padding: 6px 12px; }
+@keyframes rise {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-panel { animation: none; }
+}
 
 /* 彫る画面 */
 .maker {
@@ -172,6 +186,42 @@ dialog .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap
 .panel { display: flex; flex-direction: column; gap: 18px; }
 .panel h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 400; }
 .group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 灯りの色 */
+.swatch {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.swatch::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--c, conic-gradient(#ff9a2a, #ffd23f, #48e07a, #3fa9ff, #a26bff, #ff6fb5, #ff9a2a));
+  box-shadow: 0 0 10px var(--c, transparent);
+}
+.swatch[aria-pressed="true"] { border-color: #ffd76a; background: rgba(255, 215, 106, 0.14); }
+.swatch.custom { position: relative; }
+.swatch.custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+}
 
 input[type="text"] {
   width: 100%;

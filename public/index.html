@@ -25,6 +25,16 @@
   <main class="street" id="street">
     <canvas id="scene" tabindex="0" aria-label="ランタン通り。上下キー・スクロール・ドラッグで歩けます。ランタンを押すと大きく見られます。"></canvas>
     <p class="street-msg" id="msg">ランタンを運んでいます…</p>
+    <div class="focus-panel" id="focus" role="region" aria-live="polite" aria-label="近くで見ているランタン" hidden>
+      <div>
+        <h2 class="title"></h2>
+        <p class="meta"></p>
+      </div>
+      <div class="row">
+        <button class="btn report" id="report">通報する</button>
+        <button class="btn" id="unfocus">通りに戻る</button>
+      </div>
+    </div>
     <div class="walk">
       <button class="btn" id="back" aria-label="戻る">↓ 戻る</button>
       <span class="note">スクロール・ドラッグで通りを歩く</span>
@@ -32,15 +42,6 @@
     </div>
   </main>
 
-  <dialog id="detail">
-    <canvas width="720" height="720"></canvas>
-    <h2 class="title"></h2>
-    <p class="meta"></p>
-    <div class="row">
-      <button class="btn report" id="report">通報する</button>
-      <button class="btn" id="close">閉じる</button>
-    </div>
-  </dialog>
 
   <script type="module" src="/js/street.js"></script>
 </body>

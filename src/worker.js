@@ -6,6 +6,7 @@ const PAGE = 40;
 const POSTS_PER_HOUR = 10;
 const HIDE_AT_REPORTS = 3;
 const DEFAULT_NAME = '名無しのおばけ';
+const DEFAULT_COLOR = '#ff9a2a';
 
 export default {
   async fetch(req, env) {
@@ -37,7 +38,7 @@ async function api(req, env, url) {
 async function listLanterns(env, url) {
   const before = Number(url.searchParams.get('before')) || Date.now() + 1;
   const { results } = await env.DB.prepare(
-    'SELECT id, name, strokes, created_at FROM lanterns WHERE hidden = 0 AND created_at < ? ORDER BY created_at DESC LIMIT ?'
+    'SELECT id, name, strokes, color, created_at FROM lanterns WHERE hidden = 0 AND created_at < ? ORDER BY created_at DESC LIMIT ?'
   ).bind(before, PAGE).all();
   const lanterns = results.map(toLantern);
   const next = lanterns.length === PAGE ? lanterns[lanterns.length - 1].created_at : null;
@@ -46,7 +47,7 @@ async function listLanterns(env, url) {
 
 async function getLantern(env, id) {
   const row = await env.DB.prepare(
-    'SELECT id, name, strokes, created_at FROM lanterns WHERE id = ? AND hidden = 0'
+    'SELECT id, name, strokes, color, created_at FROM lanterns WHERE id = ? AND hidden = 0'
   ).bind(id).first();
   if (!row) return json({ error: 'not_found' }, 404);
   return json({ lantern: toLantern(row) });
@@ -63,6 +64,7 @@ async function createLantern(req, env) {
   const strokes = cleanStrokes(body?.strokes);
   if (!strokes) return json({ error: 'bad_strokes' }, 400);
   const name = cleanName(body?.name);
+  const color = cleanColor(body?.color);
 
   const ipHash = await hashIp(req, env);
   const now = Date.now();
@@ -73,8 +75,8 @@ async function createLantern(req, env) {
 
   const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12);
   await env.DB.prepare(
-    'INSERT INTO lanterns (id, name, strokes, created_at, ip_hash) VALUES (?, ?, ?, ?, ?)'
-  ).bind(id, name, JSON.stringify(strokes), now, ipHash).run();
+    'INSERT INTO lanterns (id, name, strokes, color, created_at, ip_hash) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, name, JSON.stringify(strokes), color, now, ipHash).run();
   return json({ id }, 201);
 }
 
@@ -119,6 +121,12 @@ function cleanName(input) {
   return [...name].slice(0, NAME_MAX).join('') || DEFAULT_NAME;
 }
 
+// 灯りの色（#rrggbb）。明るさの調整は描画側で行う
+function cleanColor(input) {
+  const color = String(input ?? '').toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : DEFAULT_COLOR;
+}
+
 async function hashIp(req, env) {
   const ip = req.headers.get('CF-Connecting-IP') || 'local';
   const data = new TextEncoder().encode((env.IP_SALT || 'lantern-street') + ip);
@@ -127,7 +135,7 @@ async function hashIp(req, env) {
 }
 
 function toLantern(row) {
-  return { id: row.id, name: row.name, strokes: JSON.parse(row.strokes), created_at: row.created_at };
+  return { id: row.id, name: row.name, strokes: JSON.parse(row.strokes), color: row.color || DEFAULT_COLOR, created_at: row.created_at };
 }
 
 function round3(n) {
