@@ -77,36 +77,112 @@ export function drawStrokes(ctx, strokes, s) {
 
 function drawStem(ctx, s, lit) {
   ctx.beginPath();
-  ctx.moveTo(0.46 * s, 0.27 * s);
+  ctx.moveTo(0.46 * s, 0.32 * s); // 根元はヘタのくぼみの中まで伸ばす（本体の後ろに隠れる）
   ctx.quadraticCurveTo(0.46 * s, 0.17 * s, 0.53 * s, 0.12 * s);
   ctx.lineTo(0.565 * s, 0.145 * s);
-  ctx.quadraticCurveTo(0.525 * s, 0.19 * s, 0.545 * s, 0.27 * s);
+  ctx.quadraticCurveTo(0.525 * s, 0.19 * s, 0.545 * s, 0.32 * s);
   ctx.closePath();
   ctx.fillStyle = lit ? '#6b7a2c' : '#2b3313';
   ctx.fill();
 }
 
-function drawBody(ctx, s, lit) {
-  // 外側の房から順に重ねる [中心のずれ, 横幅]
-  const lobes = [[-0.36, 0.6], [0.36, 0.6], [-0.17, 0.66], [0.17, 0.66], [0, 0.62]];
+// カボチャ本体。縦の房を球の経線として描き、angle だけ回した姿にする
+// angle > 0 で顔が画面の右へ回る
+const RIBS = 10;
+
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (p, k) => (p >> k) & 255;
+  return `rgb(${[16, 8, 0].map((k) => Math.round(ch(pa, k) + (ch(pb, k) - ch(pa, k)) * t)).join(',')})`;
+}
+
+// 房の境目（経線）の画面上の位置。高さ t での横幅を (1 - t²)^0.38 にして、
+// 楕円よりふっくら張り出したカボチャらしい形にする
+const BODY_W = 0.97; // 本体の横幅（RX に対する比）
+const STEPS = 24;
+const widthAt = (t) => Math.pow(Math.max(0, 1 - t * t), 0.38);
+
+function meridian(s, phi, reverse) {
+  const cx = CX * s, cy = CY * s, rx = RX * BODY_W * s, ry = RY * s;
+  const pts = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = -1 + (2 * i) / STEPS;
+    const w = widthAt(t);
+    // ヘタの付け根と底を少しくぼませて、上下を平らにする
+    const dip = Math.pow(1 - w, 3) * ry * (t < 0 ? 0.16 : -0.07);
+    pts.push([cx + Math.sin(phi) * rx * w, cy + t * ry + dip]);
+  }
+  return reverse ? pts.reverse() : pts;
+}
+
+// カボチャの輪郭のパスを作る
+function silhouette(ctx, s) {
+  ctx.beginPath();
+  const right = meridian(s, Math.PI / 2, false), left = meridian(s, -Math.PI / 2, true);
+  ctx.moveTo(right[0][0], right[0][1]);
+  for (const [x, y] of right) ctx.lineTo(x, y);
+  for (const [x, y] of left) ctx.lineTo(x, y);
+  ctx.closePath();
+}
+
+function drawBody(ctx, s, lit, angle = 0) {
   const stops = lit
     ? ['#ffb04a', '#e8671a', '#8a340b']
     : ['#8e4716', '#55260b', '#241005'];
-  for (const [dx, w] of lobes) {
-    const x = (CX + dx * RX) * s, y = CY * s;
-    const rx = RX * w * s, ry = RY * s;
-    const g = ctx.createRadialGradient(x - rx * 0.25, y - ry * 0.35, ry * 0.05, x, y, Math.max(rx, ry) * 1.05);
-    g.addColorStop(0, stops[0]);
-    g.addColorStop(0.6, stops[1]);
-    g.addColorStop(1, stops[2]);
+  const cx = CX * s, cy = CY * s, rx = RX * BODY_W * s, ry = RY * s;
+
+  // 下地（房の隙間が見えないように）
+  silhouette(ctx, s);
+  ctx.fillStyle = stops[2];
+  ctx.fill();
+
+  // 正面に房の真ん中が来るよう、境目を半分ずらす（正面にまっすぐな線が出ないように）
+  for (let k = 0; k < RIBS; k++) {
+    let a = ((k + 0.5) / RIBS) * Math.PI * 2 + angle;
+    let b = ((k + 1.5) / RIBS) * Math.PI * 2 + angle;
+    // こちら側（cos > 0）の部分だけ描く
+    const vis = (p) => Math.cos(p) > 0;
+    if (!vis(a) && !vis(b)) continue;
+    // 見えている側（-π/2〜π/2 の周期）に収める
+    const v = vis(a) ? a : b;
+    const lo = Math.floor((v + Math.PI / 2) / (Math.PI * 2)) * Math.PI * 2 - Math.PI / 2;
+    a = Math.max(a, lo);
+    b = Math.min(b, lo + Math.PI);
+    const mid = (a + b) / 2;
+    const facing = Math.max(0, Math.cos(mid)); // 正面を向いている房ほど明るい
+
+    const left = meridian(s, a, false), right = meridian(s, b, true);
     ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.moveTo(left[0][0], left[0][1]);
+    for (const [x, y] of left) ctx.lineTo(x, y);
+    for (const [x, y] of right) ctx.lineTo(x, y);
+    ctx.closePath();
+
+    const xa = cx + Math.sin(a) * rx, xb = cx + Math.sin(b) * rx;
+    const g = ctx.createLinearGradient(Math.min(xa, xb), 0, Math.max(xa, xb) + 0.01, 0);
+    // 房の端は少しだけ暗く、正面を向いた房ほど明るく
+    const edge = mixHex(stops[2], stops[1], 0.25 + 0.5 * facing);
+    g.addColorStop(0, edge);
+    g.addColorStop(0.5, mixHex(stops[1], stops[0], 0.15 + 0.85 * facing));
+    g.addColorStop(1, edge);
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.lineWidth = s * 0.005;
-    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = s * 0.004;
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.stroke();
   }
+
+  // 全体の陰影（上が明るく下が暗い）
+  ctx.save();
+  silhouette(ctx, s);
+  ctx.clip();
+  const shade = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
+  shade.addColorStop(0, 'rgba(255,230,180,0.12)');
+  shade.addColorStop(0.55, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(cx - rx, cy - ry, rx * 2, ry * 2);
+  ctx.restore();
 }
 
 // 彫った形を mask にして、好きな塗りで染めたキャンバスを返す
