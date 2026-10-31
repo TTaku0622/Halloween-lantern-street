@@ -7,8 +7,7 @@
     {
       "binding": "DB",
       "database_name": "lantern-street",
-      // wrangler d1 create のあとに本物の ID に置き換える
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "a03563bd-5ecb-4bb4-8789-7a9081805b0b"
     }
   ]
 }
