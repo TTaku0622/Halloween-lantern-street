@@ -4,7 +4,8 @@
   "compatibility_date": "2025-10-01",
   // 画面は Astro で dist/ に書き出してから配信する（wrangler dev / deploy の前に自動でビルド）
   "build": { "command": "npm run build" },
-  "assets": { "directory": "./dist", "binding": "ASSETS" },
+  // 画面のファイルがあっても先に Worker を通す（workers.dev では画面を出さないため）
+  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
   "d1_databases": [
     {
       "binding": "DB",

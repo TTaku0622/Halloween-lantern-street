@@ -7,6 +7,8 @@ const POSTS_PER_HOUR = 10;
 const HIDE_AT_REPORTS = 3;
 const DEFAULT_NAME = '名無しのおばけ';
 const DEFAULT_COLOR = '#ff9a2a';
+// 公開している画面（デプロイナウ版）。Cloudflare 版の画面は非公開にして、ここへ案内する
+const SITE = 'https://lantern-street.lolipop-now.app';
 
 export default {
   async fetch(req, env) {
@@ -21,6 +23,8 @@ export default {
         return json({ error: 'server_error' }, 500);
       }
     }
+    // API はデプロイナウ版が使うので残し、workers.dev の画面だけ閉じる（localhost の wrangler dev では画面も出す）
+    if (url.hostname.endsWith('.workers.dev')) return Response.redirect(SITE + url.pathname + url.search, 302);
     return env.ASSETS.fetch(req);
   },
 };

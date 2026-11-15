@@ -17,6 +17,7 @@
 - Canvas 2D で通りとランタンを描画、Web Audio で音量を測定
 - `wrangler dev` / `wrangler deploy` の前に `astro build` が自動で走り、`dist/` を配信する
 - ほかのドメイン（デプロイナウなど）に置いた画面からは、Cloudflare の API を呼ぶ（`public/js/api.js`）
+- 公開している画面はデプロイナウ版だけ。Cloudflare（workers.dev）は API だけを出し、ページを開いた人はデプロイナウ版へ転送する
 
 ## 開発
 
