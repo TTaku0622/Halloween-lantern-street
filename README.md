@@ -2,7 +2,7 @@
 
 みんなが彫ったカボチャのランタンが並ぶ夜の通り。周りの音に合わせて灯りが揺れます。
 
-**▶ https://lantern-street.lantern-street.workers.dev**
+**▶ https://lantern-street.lolipop-now.app**
 
 ## 使い方
 
