@@ -171,6 +171,8 @@ dialog .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap
 
 .panel { display: flex; flex-direction: column; gap: 18px; }
 .panel h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 400; }
+/* 作り方の説明は長さが変わるので、下のボタンが動かないよう高さを取っておく */
+#kind-note { min-height: 3.4em; margin-bottom: 0; }
 .group { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* 灯りの色 */

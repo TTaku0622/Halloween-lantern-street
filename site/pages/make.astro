@@ -14,7 +14,7 @@
   <header>
     <div class="moon" aria-hidden="true"></div>
     <h1 class="title">ランタンを彫る</h1>
-    <p>カボチャの上をなぞると、そこがくり抜かれます。「塗り」で囲むと、囲んだ形ごと抜けます。</p>
+    <p>カボチャを彫って、ランタンを作りましょう。「ふつう」はナイフで形を切り抜き、「かんたん」はなぞったところがそのまま抜けます。</p>
   </header>
 
   <main class="maker">
@@ -24,6 +24,15 @@
 
     <div class="panel">
       <section>
+        <h2>作り方</h2>
+        <div class="group" id="kinds">
+          <button class="btn" data-kind="cut" aria-pressed="true">ふつう（切り抜く）</button>
+          <button class="btn" data-kind="draw" aria-pressed="false">かんたん（なぞる）</button>
+        </div>
+        <p class="note" id="kind-note" role="status"></p>
+      </section>
+
+      <section id="tools-section" hidden>
         <h2>彫り方</h2>
         <div class="group" id="tools">
           <button class="btn" data-mode="l" data-w="0.016" aria-pressed="false">細い線</button>
@@ -82,6 +91,6 @@
     </div>
   </main>
 
-  <script type="module" src="/js/make.js"></script>
+  <script is:inline type="module" src="/js/make.js"></script>
 </body>
 </html>

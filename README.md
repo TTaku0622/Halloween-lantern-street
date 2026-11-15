@@ -12,8 +12,11 @@
 
 ## 構成
 
-- Cloudflare Workers（静的アセット ＋ API）、D1
+- 画面：Astro（静的書き出し。ページは `site/pages/`、JS・CSS は `public/`）
+- API・保存：Cloudflare Workers（`src/worker.js`）、D1
 - Canvas 2D で通りとランタンを描画、Web Audio で音量を測定
+- `wrangler dev` / `wrangler deploy` の前に `astro build` が自動で走り、`dist/` を配信する
+- ほかのドメイン（デプロイナウなど）に置いた画面からは、Cloudflare の API を呼ぶ（`public/js/api.js`）
 
 ## 開発
 

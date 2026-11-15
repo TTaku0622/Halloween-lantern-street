@@ -2,7 +2,9 @@
   "name": "lantern-street",
   "main": "src/worker.js",
   "compatibility_date": "2025-10-01",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  // 画面は Astro で dist/ に書き出してから配信する（wrangler dev / deploy の前に自動でビルド）
+  "build": { "command": "npm run build" },
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
   "d1_databases": [
     {
       "binding": "DB",

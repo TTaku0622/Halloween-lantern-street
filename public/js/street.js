@@ -1,5 +1,6 @@
 import { buildLantern, drawFrame, drawLanternAt, flicker, flameColors, rgba } from './lantern.js';
 import { Ears, nextLight, clamp } from './sound.js';
+import { API } from './api.js';
 
 const scene = document.getElementById('scene');
 const sc = scene.getContext('2d');
@@ -51,7 +52,7 @@ function project(x, y, z) {
 
 async function load(before) {
   const q = before ? `?before=${before}` : '';
-  const res = await fetch(`/api/lanterns${q}`);
+  const res = await fetch(`${API}/api/lanterns${q}`);
   if (!res.ok) throw new Error(res.status);
   return res.json();
 }
@@ -164,7 +165,7 @@ detail.addEventListener('click', (e) => { if (e.target === detail) detail.close(
 reportBtn.addEventListener('click', async () => {
   if (!opened) return;
   reportBtn.disabled = true;
-  const res = await fetch(`/api/lanterns/${opened.data.id}/report`, { method: 'POST' });
+  const res = await fetch(`${API}/api/lanterns/${opened.data.id}/report`, { method: 'POST' });
   reportBtn.textContent = res.ok ? '通報しました' : '通報できませんでした';
 });
 
@@ -430,7 +431,7 @@ async function main() {
   const id = new URLSearchParams(location.search).get('new');
   if (id) {
     history.replaceState(null, '', '/');
-    const res = await fetch(`/api/lanterns/${id}`);
+    const res = await fetch(`${API}/api/lanterns/${id}`);
     if (res.ok) openDetail((await res.json()).lantern);
   }
 }

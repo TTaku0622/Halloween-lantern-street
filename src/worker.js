@@ -1,4 +1,4 @@
-// ランタン通りの API。画面（public/）は assets がそのまま配信する
+// ランタン通りの API。画面（Astro が dist/ に書き出したもの）は assets がそのまま配信する
 const MAX_STROKES = 300;
 const MAX_POINTS = 4000;
 const NAME_MAX = 20;
@@ -12,6 +12,8 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname.startsWith('/api/')) {
+      // デプロイナウなど、ほかのドメインに置いた画面からも呼べるようにする
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       try {
         return await api(req, env, url);
       } catch (e) {
@@ -142,9 +144,17 @@ function round3(n) {
   return Math.round(n * 1000) / 1000;
 }
 
+// Cookie などの認証情報は使っていないので、どのドメインからでも許可してよい
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+  'access-control-max-age': '86400',
+};
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
+    headers: { 'content-type': 'application/json; charset=utf-8', ...CORS },
   });
 }
