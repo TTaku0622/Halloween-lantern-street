@@ -1,6 +1,6 @@
 // API の呼び先。Cloudflare（Worker と同じドメイン）なら相対パス、
 // それ以外（デプロイナウなど）からは Cloudflare の API を呼ぶ
-const REMOTE = 'https://lantern-street.lantern-street.workers.dev';
+const REMOTE = 'https://lantern-street.tatsu-0622.workers.dev';
 const LOCAL = 'http://localhost:8787'; // wrangler dev
 
 const { hostname, port } = location;

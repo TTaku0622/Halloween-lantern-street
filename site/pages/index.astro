@@ -1,3 +1,8 @@
+---
+// JS と CSS は Astro がまとめて、中身が変わるたびに名前の変わるファイルにする
+// （デプロイナウは JS・CSS を1年キャッシュさせるので、名前を変えないと更新が届かない）
+import '../styles/style.css';
+---
 <!doctype html>
 <html lang="ja">
 <head>
@@ -8,7 +13,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <header>
@@ -42,6 +46,6 @@
     </div>
   </dialog>
 
-  <script is:inline type="module" src="/js/street.js"></script>
+  <script src="../scripts/street.js"></script>
 </body>
 </html>
